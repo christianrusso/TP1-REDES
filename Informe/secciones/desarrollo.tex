@@ -1,0 +1,133 @@
+\section{Desarrollo}
+
+\subsection{Fuentes de información}
+El análisis del tráfico de las redes lo realizamos modelando dos fuentes de información. La primer fuente, $S_{type}$\footnote{Con $S_{type}$ nos referimos a la fuente $S$ del enunciado del trabajo practico.}, distingue los protocolos que se encapsulan en todos los paquetes ethernet de una red:
+
+\begin{center}
+  $S_{type} = \{s_1, ..., s_n\}$ $s_i$ es el valor del campo \textit{type} del frame de capa 2.
+\end{center}
+
+La segunda fuente de información, $S_{IP}$\footnote{Con $S_{IP}$ nos referimos a la fuente $S_1$ que el enunciado del trabajo practico nos pide proponer.}, distingue los nodos de la red en base \textit{solamente} al trafico ARP. Esto significa que los símbolos de $S_{IP}$ están conformados por campos de un paquete ARP:
+\begin{center}
+  $S_{IP} = \{s_1, ..., s_n\}$ $s_i$ es el valor del campo $psrc$ (\textit{dirección IP del emisor}) del frame ARP.
+\end{center}
+
+Estimamos la probabilidad de cada uno de los símbolos de ambas fuentes en función de su \textbf{frecuencia muestral}, es decir, de la frecuencia relativa de apariciones de cada suceso en la muestra:
+\begin{center}
+$\frac{f_{E_i}}{N} \longrightarrow P(E_i)$
+\end{center}
+donde $E_i$ es el suceso: ``Aparece el símbolo $s_i$'', $f_{E_i}$ es la cantidad de veces que sucede $E_i$ en la muestra, $N$ es el tamaño total de la muestra y $P(E_i)$ denota la probabilidad de $E_i$.
+
+Esto nos permite calcular la \textbf{información} de cada símbolo de la fuente:
+
+\begin{center}
+$I(E_i) = log_2(\frac{1}{P(E_i)}) = - log_2(P(E_i))$
+\end{center}
+
+Finalmente, obtenemos la \textbf{entropía} de cada fuente de la siguiente manera:
+
+\begin{center}
+$H(S) = \sum_{1}^{n}P(E_i) * I(E_i) = \sum_{1}^{n}P(E_i) * log_2(\frac{1}{P(E_i)}) = - \sum_{1}^{n}P(E_i) * log_2(P(E_i))$
+\end{center}
+
+
+\subsection{Implementación de las herramientas}
+
+Implementamos tres herramientas que nos permitieron observar y analizar el tráfico de una red.
+
+La primera se encuentra en el archivo \textit{Sniffer.py}. Ésta permite observar pasivamente el tráfico de paquetes de una red. El script imprime un pequeño resumen, de una sola línea, por cada paquete registrado en el cual se muestran los detalles más relevantes del mismo. Ejemplos de los campos que provee son: los protocolos involucrados, la dirección del host origen y la dirección del host destino. El script escucha sobre la red hasta que recibe una señal de aborto (\textit{por ejemplo: Ctrl + C})
+
+La segunda se encuentra en el archivo \textit{Sniffer\_S.py}. Esta herramienta identifica el campo \textit{type} de cada paquete ethernet enviado a través de la red y, en base a 
+dicho campo, clasifica al paquete. Esto le permite al script determinar la cantidad de veces que se utilizó cada protocolo en la muestra (\textit{captura de la red}), la probabilidad 
+de que aparezca un paquete de un determinado protocolo, y la entropia de la fuente $S_{type}$ en función de la captura de la red .\\
+Durante el desarrollo de esta herramienta surgió un inconveniente relacionado con los paquetes \textbf{IEEE 802.3}. Nuestro algoritmo necesita acceder al campo \textit{type} del paquete Ethernet 
+para identificar el protocolo que este encapsula. El problema radica en el hecho de que los paquetes 802.3 utilizan el campo \textit{type} para indicar el largo del paquete en lugar del protocolo. Esto impedía que nuestro algoritmo terminara de ejecutar correctamente. Solucionamos este problema verificando que los paquetes sobre los cuales operamos sean Ethernet y no 802.3 \textit{(``\textbf{if} Ether \textbf{in} packet'')}.
+
+La tercera y última se encuentra en el archivo \textit{Sniffer\_S1.py}. Ésta sólo analiza el tráfico ARP de la red. En base a dicho tráfico, clasifica los paquetes, calcula su frecuencia y determina la proporción del tipo de paquetes, los cuales pueden ser:
+\begin{itemize}
+    \item Paquetes de petición, \textit{who-has}. Éstos paquetes son enviados, mayormente, en forma de broadcast (\textit{no siempre}) con el objetivo de poder localizar la dirección MAC a la cual le pertenece una dirección IP conocida.
+    \item Paquetes de respuesta, \textit{is-at}. Éstos paquetes son enviados de manera unicast, ya que se utilizan para responder al host que realizó un \textit{who-has} previamente.
+\end{itemize}
+También nos permite distinguir los nodos de la red mediante los campos 
+\textbf{psrc}(\textit{IP del host origen}) y \textbf{pdst}(\textit{IP del host destino}) del paquete ARP, y con esto armar un digrafo que representa la topología de la red, con los 
+host de la red como los \textit{nodos} y al trafico ARP capturado como las \textit{aristas}. 
+Además, el script calcula la probabilidad de los símbolos de la fuente $S_{IP}$, la información 
+de los símbolos y la entropía de la fuente en función de la captura de la red.\\
+
+La segunda y tercer herramienta tienen un parámetro llamado \textit{timeout} (medido en segundos) el cual permite definir por cuanto tiempo se realizara la captura de paquetes.
+
+Las dependencias de los script son Python y Scapy. Vale la pena mencionar que, en caso de querer guardar los resultados de la captura, se puede redireccionar la salida del script a un archivo de la siguiente manera:
+\begin{verbatim}
+    sudo python nombre_script.py > archivo_salida
+\end{verbatim}
+
+Dado que el campo \textit{type} de los paquetes Ethernet es un valor decimal (\textit{o hexadecimal}), utilizamos la siguiente tabla\footnote{Fuente: \url{http://en.wikipedia.org/wiki/EtherType}} para identificar a que protocolo se corresponde cada valor de dicho campo:
+
+\begin{table}[H]
+\begin{tabular}{|l|l|l}
+\hline
+\textbf{EtherType Decimal} & \textbf{EtherType Hexadecimal} & \textbf{Protocolo} \\ \hline
+2048 & 0x0800 & Internet Protocol version 4 (IPv4) \\ \hline
+2054 & 0x0806 & Address Resolution Protocol (ARP) \\ \hline
+2114 & 0x0842 & Wake-on-LAN  \\ \hline
+8944 & 0x22F0 & Audio Video Transport Protocol\\ \hline
+8947 & 0x22F3 & IETF TRILL Protocol \\ \hline
+24579 & 0x6003 & DECnet Phase IV \\ \hline
+32821 & 0x8035 & Reverse Address Resolution Protocol \\ \hline
+32923 & 0x809B & AppleTalk (Ethertalk) \\ \hline
+23011 & 0x80F3 & AppleTalk Address Resolution Protocol (AARP) \\ \hline
+23024 & 0x8100 & VLAN-tagged frame \\ \hline
+33079 & 0x8137 & IPX \\ \hline
+33080 & 0x8138 & IPX \\ \hline
+33284 & 0x8204 & QNX Qnet \\ \hline
+34525 & 0x86DD & Internet Protocol Version 6 (IPv6) \\ \hline
+34824 & 0x8808 & Ethernet flow control \\ \hline
+34825 & 0x8809 & Slow Protocols (IEEE 802.3) \\ \hline
+34841 & 0x8819 & CobraNet \\ \hline
+34887 & 0x8847 & MPLS unicast \\ \hline
+34888 & 0x8848 & MPLS multicast \\ \hline
+34915 & 0x8863 & PPPoE Session Stage \\ \hline
+34916 & 0x8864 & PPPoE Session Stage \\ \hline
+34928 & 0x8870 & Jumbo Frames \\ \hline
+34939 & 0x887B & HomePlug 1.0 MME \\ \hline
+34958 & 0x888E & EAP over LAN (IEEE 802.1X) \\ \hline
+34962 & 0x8892 & PROFINET Protocol \\ \hline
+34970 & 0x889A & HyperSCSI (SCSI over Ethernet) \\ \hline
+34978 & 0x88A2 & ATA over Ethernet \\ \hline
+34980 & 0x88A4 & EtherCAT Protocol \\ \hline
+34984 & 0x88A8 & Provider Bridging \\ \hline
+34987 & 0x88AB & Ethernet Powerlink \\ \hline
+35020 & 0x88CC & Link Layer Discovery Protocol (LLDP) \\ \hline
+35021 & 0x88CD & SERCOS III \\ \hline
+35041 & 0x88E1 & HomePlug AV MME \\ \hline
+35043 & 0x88E3 & Media Redundancy Protocol (IEC62439-2) \\ \hline
+35045 & 0x88E5 & MAC security \\ \hline
+35063 & 0x88F7 & Precision Time Protocol (PTP)\\ \hline
+35074 & 0x8902 & CFM \\ \hline
+35078 & 0x8906 & FCoE \\ \hline
+35092 & 0x8914 & FCoE Initialization Protocol \\ \hline
+35093 & 0x8915 & RoCE \\ \hline
+35119 & 0x892F & High-availability Seamless Redundancy \\ \hline
+36864 & 0x9000 & Ethernet Configuration Testing Protocol \\ \hline
+51966 & 0xCAFE & Veritas Low Latency Transport (LLT) \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Tipos de gráficos}
+
+El análisis realizado sobre cada red se basa en cuatro tipos de gráficos:
+\begin{itemize}
+	\item \textbf{Grafo dirigido}: Utilizamos estos grafos para obtener una representación gráfica de la topología de la red. El mismo cuenta con un nodo por cada dirección IP que aparece como origen o destino de un paquete ARP. Una arista desde el nodo A hacia el nodo B significara que la IP A envió un paquete ARP con la IP B como destino. El peso de cada arista se corresponde con la cantidad de paquetes enviados desde A hacia B durante la captura realizada.
+  \item \textbf{Gráfico de barras}: Este tipo de gráfico lo utilizamos para visualizar la información de cada IP (\textit{símbolos de la fuente $S_{IP}$}) y, además, añadimos una recta horizontal en el valor de la entropía de la fuente para facilitar la comparación con dichos valores.
+	\item \textbf{Gráfico circular}: Estos gráficos los utilizamos para mostrar la proporción de los protocolos que aparecen en los paquetes Ethernet y la de los paquetes \textit{who-has} e \textit{is-at} entre los paquetes ARP capturados.
+	\item \textbf{Histogramas}: Los histogramas por IP, en cuántos paquetes apareció una IP, nos permiten identificar a los principales responsables del tráfico de una red y en muchos casos distinguir ciertos nodos. Esperamos observar una fuerte correlación entre este gráfico y el de barras que muestra la información por IP.
+\end{itemize}
+
+Para el desarrollo de los gráficos utilizamos las siguientes herramientas:
+\begin{itemize}
+	\item El lenguaje DOT\footnote{Lenguaje DOT: \url{http://en.wikipedia.org/wiki/DOT\_\%28graph_description_language\%29}} para describir los digrafos resultantes de analizar el tráfico ARP de la red. Es importante señalar que dicho digrafo es construido automáticamente por el script \textit{Sniffer\_S1.py}.
+	\item El software Graphviz\footnote{Graphviz: \url{http://www.graphviz.org/}} para graficar los digrafos en formato DOT.
+	\item GSheet\footnote{Google Drive: \url{drive.google.com/}} para realizar los gráficos de barras, los gráficos circulares y los histogramas.
+\end{itemize}
+
+\newpage

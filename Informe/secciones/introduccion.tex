@@ -1,0 +1,20 @@
+\section{Introducción}
+
+En el presente trabajo utilizamos herramientas básicas de diagnóstico de red
+para analizar el tráfico de los protocolos de las capas de enalace (2) y de red (3) del modelo OSI. El énfasis del análisis recayó sobre:
+\begin{itemize}
+  \item Determinar el \textit{overhead} impuesto por el protocolo ARP (\textit{Address Resolution Protocol}).
+  \item Identificar los nodos distinguidos de una red.
+\end{itemize}
+Desarrollamos un analizador de paquetes\footnote{Los scripts se encuentran en los archivos Sniffer.py, Sniffer\_S.py y Sniffer\_S1.py} 
+que permite escuchar pasivamente todos los paquetes que llegan a una NIC 
+(Network Interface Controller) conectada a una red e inspeccionarlos. La implementación de 
+dichas herramientas fue realizada en Python\footnote{Python: \url{https://www.python.org/}} utilizando el framework Scapy \footnote{Scapy: \url{http://www.secdev.org/projects/scapy/}}
+
+El muestreo de las redes comprende redes públicas y privadas con pocos y muchos nodos. Tomamos muestras de los siguientes lugares, abarcando todas las posibilidades, para aumentar la variedad de las mismas:
+\begin{itemize}
+	\item Empresa S.I.S.A: red privada, pocos nodos.
+	\item Laboratorios del Departamento de Computación de la FCEN: red privada, muchos nodos.
+	\item Starbucks: red pública, pocos nodos.
+	\item Shopping Unicenter: red pública, muchos nodos.
+\end{itemize}
